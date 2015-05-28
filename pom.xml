@@ -50,7 +50,12 @@
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>ij</artifactId>
-		</dependency>
+    </dependency>
+    <dependency>
+      <groupId>sc.fiji</groupId>
+      <artifactId>Graph_Cut</artifactId>
+      <version>1.0.1</version>
+    </dependency>
 	</dependencies>
 
 	<build>
