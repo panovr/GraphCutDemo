@@ -1,6 +1,4 @@
 # GraphCutDemo
-A tutorial project implementing graphcut texture using Fiji's graphcut plugin
-
 This project is an implementation of a graph cut technique to generate a seamless texture 
 from a small sample image (the patch), introduced in the following article:
 
