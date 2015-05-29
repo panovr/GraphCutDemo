@@ -36,7 +36,6 @@ public class Graphcut_Demo implements PlugInFilter {
 		}
 
 		imageA = imp;
-		imageB = imp.duplicate();
 		
 		return DOES_RGB;
 	}
@@ -50,6 +49,7 @@ public class Graphcut_Demo implements PlugInFilter {
 		width = ip.getWidth();
 		height = ip.getHeight();
 		
+		imageB = imageA.duplicate();
 		
 		// compute overlapped width
 		int overlap_width = width / 2;
