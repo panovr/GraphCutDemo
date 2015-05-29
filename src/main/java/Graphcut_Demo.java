@@ -1,36 +1,29 @@
-/*
- * To the extent possible under law, the Fiji developers have waived
- * all copyright and related or neighboring rights to this tutorial code.
- *
- * See the CC0 1.0 Universal license for details:
- *     http://creativecommons.org/publicdomain/zero/1.0/
- */
-
+import graphcut.GraphCut;
+import graphcut.Terminal;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.gui.GenericDialog;
+import ij.gui.NewImage;
 import ij.plugin.filter.PlugInFilter;
+import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
 
 /**
- * ProcessPixels
+ * A tutorial demo for demonstrating Fiji's graphcut plugin usage.
  *
- * A template for processing each pixel of either
- * GRAY8, GRAY16, GRAY32 or COLOR_RGB images.
- *
- * @author The Fiji Team
+ * @author Yili Zhao
  */
-public class Graphcut_demo implements PlugInFilter {
-	protected ImagePlus image;
+public class Graphcut_Demo implements PlugInFilter {
+	protected ImagePlus imageA;
+	protected ImagePlus imageB;
+	protected ImagePlus no_graphcut;
+	protected ImagePlus graphcut;
 
 	// image property members
 	private int width;
 	private int height;
-
-	// plugin parameters
-	public double value;
-	public String name;
+	private int cwidth;
+	private int cheight;
 
 	/**
 	 * @see ij.plugin.filter.PlugInFilter#setup(java.lang.String, ij.ImagePlus)
@@ -42,8 +35,10 @@ public class Graphcut_demo implements PlugInFilter {
 			return DONE;
 		}
 
-		image = imp;
-		return DOES_8G | DOES_16 | DOES_32 | DOES_RGB;
+		imageA = imp;
+		imageB = imp.duplicate();
+		
+		return DOES_RGB;
 	}
 
 	/**
@@ -54,113 +49,152 @@ public class Graphcut_demo implements PlugInFilter {
 		// get width and height
 		width = ip.getWidth();
 		height = ip.getHeight();
-
-		if (showDialog()) {
-			process(ip);
-			image.updateAndDraw();
-		}
-	}
-
-	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Process pixels");
-
-		// default value is 0.00, 2 digits right of the decimal point
-		gd.addNumericField("value", 0.00, 2);
-		gd.addStringField("name", "John");
-
-		gd.showDialog();
-		if (gd.wasCanceled())
-			return false;
-
-		// get entered values
-		value = gd.getNextNumber();
-		name = gd.getNextString();
-
-		return true;
-	}
-
-	/**
-	 * Process an image.
-	 *
-	 * Please provide this method even if {@link ij.plugin.filter.PlugInFilter} does require it;
-	 * the method {@link ij.plugin.filter.PlugInFilter#run(ij.process.ImageProcessor)} can only
-	 * handle 2-dimensional data.
-	 *
-	 * If your plugin does not change the pixels in-place, make this method return the results and
-	 * change the {@link #setup(java.lang.String, ij.ImagePlus)} method to return also the
-	 * <i>DOES_NOTHING</i> flag.
-	 *
-	 * @param image the image (possible multi-dimensional)
-	 */
-	public void process(ImagePlus image) {
-		// slice numbers start with 1 for historical reasons
-		for (int i = 1; i <= image.getStackSize(); i++)
-			process(image.getStack().getProcessor(i));
-	}
-
-	// Select processing method depending on image type
-	public void process(ImageProcessor ip) {
-		int type = image.getType();
-		if (type == ImagePlus.GRAY8)
-			process( (byte[]) ip.getPixels() );
-		else if (type == ImagePlus.GRAY16)
-			process( (short[]) ip.getPixels() );
-		else if (type == ImagePlus.GRAY32)
-			process( (float[]) ip.getPixels() );
-		else if (type == ImagePlus.COLOR_RGB)
-			process( (int[]) ip.getPixels() );
-		else {
-			throw new RuntimeException("not supported");
-		}
-	}
-
-	// processing of GRAY8 images
-	public void process(byte[] pixels) {
-		for (int y=0; y < height; y++) {
-			for (int x=0; x < width; x++) {
-				// process each pixel of the line
-				// example: add 'number' to each pixel
-				pixels[x + y * width] += (byte)value;
+		
+		
+		// compute overlapped width
+		int overlap_width = width / 2;
+		
+		// compute column offset
+		int xoffset = width - overlap_width;
+		
+		// compute composite width and height
+		cwidth = 2 * width - overlap_width;
+		cheight = height;
+		
+		no_graphcut = NewImage.createRGBImage("Direct composite", cwidth, cheight, 1, NewImage.FILL_BLACK);
+		
+		// copy imageA and ImageB to no_graphcut
+		ColorProcessor cp1 = (ColorProcessor)imageA.getProcessor();
+		ColorProcessor cp2 = (ColorProcessor)imageB.getProcessor();
+		ColorProcessor cp3 = (ColorProcessor)no_graphcut.getProcessor();
+		
+		int[] p1 = (int[])cp1.getPixels();
+		int[] p2 = (int[])cp2.getPixels();
+		int[] p3 = (int[])cp3.getPixels();
+		
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				p3[x + y * cwidth] = p1[x + y * width];
 			}
 		}
-	}
-
-	// processing of GRAY16 images
-	public void process(short[] pixels) {
-		for (int y=0; y < height; y++) {
-			for (int x=0; x < width; x++) {
-				// process each pixel of the line
-				// example: add 'number' to each pixel
-				pixels[x + y * width] += (short)value;
+		
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				p3[x + y * cwidth + xoffset] = p2[x + y * width];
 			}
 		}
-	}
-
-	// processing of GRAY32 images
-	public void process(float[] pixels) {
-		for (int y=0; y < height; y++) {
-			for (int x=0; x < width; x++) {
-				// process each pixel of the line
-				// example: add 'number' to each pixel
-				pixels[x + y * width] += (float)value;
+		
+		// estimated node count
+		int est_nodes = height * overlap_width;
+		// estimated edges
+		int est_edges = est_nodes * 4;
+		
+		// create graphcut object
+		GraphCut g = new GraphCut(est_nodes, est_edges);
+		
+		// set the source/sink weights
+		for (int y = 0; y < height; y++) {
+			g.setTerminalWeights(y * overlap_width, Integer.MAX_VALUE, 0);
+			g.setTerminalWeights(y * overlap_width + overlap_width - 1, 0, Integer.MAX_VALUE);
+		}
+		
+		
+		int[] v1 = {0, 0, 0};
+		int[] v2 = {0, 0, 0};
+		int pos1, pos2;
+		float cap0, cap1, cap2;
+		
+		// set edge weights
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < overlap_width; x++) {
+				int idx = y * overlap_width + x;
+				
+				pos1 = y * width + xoffset + x;
+				pos2 = y * width + x;
+				
+				v1[0] = (int)(p1[pos1] & 0xff0000) >> 16;
+			    v1[1] = (int)(p1[pos1] & 0x00ff00) >> 8;
+		        v1[2] = (int)(p1[pos1] & 0x0000ff);
+		        
+			    v2[0] = (int)(p2[pos2] & 0xff0000) >> 16;
+			    v2[1] = (int)(p2[pos2] & 0x00ff00) >> 8;
+			    v2[2] = (int)(p2[pos2] & 0x0000ff);
+			    
+			    cap0 = L2norm(v1, v2);
+			    
+			    // add right edge
+			    if (x + 1 < overlap_width) {
+			    	pos1 = y * width + xoffset + x + 1;
+					pos2 = y * width + x + 1;
+					
+					v1[0] = (int)(p1[pos1] & 0xff0000) >> 16;
+				    v1[1] = (int)(p1[pos1] & 0x00ff00) >> 8;
+			        v1[2] = (int)(p1[pos1] & 0x0000ff);
+			        
+				    v2[0] = (int)(p2[pos2] & 0xff0000) >> 16;
+				    v2[1] = (int)(p2[pos2] & 0x00ff00) >> 8;
+				    v2[2] = (int)(p2[pos2] & 0x0000ff);
+				    
+				    cap1 = L2norm(v1, v2);
+				    
+				    g.setEdgeWeight(idx, idx + 1, cap0 + cap1);
+			    }
+			    
+			    // add bottom edge
+			    if (y + 1 < height) {
+			    	pos1 = (y + 1) * width + xoffset + x;
+					pos2 = (y + 1) * width + x;
+					
+					v1[0] = (int)(p1[pos1] & 0xff0000) >> 16;
+				    v1[1] = (int)(p1[pos1] & 0x00ff00) >> 8;
+			        v1[2] = (int)(p1[pos1] & 0x0000ff);
+			        
+				    v2[0] = (int)(p2[pos2] & 0xff0000) >> 16;
+				    v2[1] = (int)(p2[pos2] & 0x00ff00) >> 8;
+				    v2[2] = (int)(p2[pos2] & 0x0000ff);
+				    
+				    cap2 = L2norm(v1, v2);
+				    
+				    g.setEdgeWeight(idx, idx + overlap_width, cap0 + cap2);
+			    }
 			}
 		}
-	}
-
-	// processing of COLOR_RGB images
-	public void process(int[] pixels) {
-		for (int y=0; y < height; y++) {
-			for (int x=0; x < width; x++) {
-				// process each pixel of the line
-				// example: add 'number' to each pixel
-				pixels[x + y * width] += (int)value;
+		
+		// compute min-cut by max-flow
+		g.computeMaximumFlow(false, null);
+		
+		graphcut = no_graphcut.duplicate();
+		graphcut.setTitle("Graphcut composite");
+		ColorProcessor cp = (ColorProcessor)graphcut.getProcessor();
+		int[] p = (int[])cp.getPixels();
+		
+		// find label for every pixel in overlapped region
+		int idx = 0;
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < overlap_width; x++) {
+				if (g.getTerminal(idx) == Terminal.FOREGROUND) {
+					p[y * cwidth + xoffset + x] = p1[y * width + xoffset + x];
+				} else if (g.getTerminal(idx) == Terminal.BACKGROUND) {
+					p[y * cwidth + xoffset + x] = p2[y * width + x];
+				}
+				idx++;
 			}
 		}
+		
+		no_graphcut.show("Composite without graphcut");
+		graphcut.show("Composite with graphcut");
+	}
+	
+	private float L2norm(int[] v1, int[] v2) {
+		float norm = (float)Math.sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
+				         (v1[1] - v2[1]) * (v1[1] - v2[1]) +
+				         (v1[2] - v2[2]) * (v1[2] - v2[2]));
+		return norm;
 	}
 
 	public void showAbout() {
-		IJ.showMessage("ProcessPixels",
-			"a template for processing each pixel of an image"
+		IJ.showMessage("GraphcutDemo",
+			"a tutorial for demonstrating graphcut usage"
 		);
 	}
 
@@ -174,7 +208,7 @@ public class Graphcut_demo implements PlugInFilter {
 	 */
 	public static void main(String[] args) {
 		// set the plugins.dir property to make the plugin appear in the Plugins menu
-		Class<?> clazz = Process_Pixels.class;
+		Class<?> clazz = Graphcut_Demo.class;
 		String url = clazz.getResource("/" + clazz.getName().replace('.', '/') + ".class").toString();
 		String pluginsDir = url.substring(5, url.length() - clazz.getName().length() - 6);
 		System.setProperty("plugins.dir", pluginsDir);
@@ -183,7 +217,7 @@ public class Graphcut_demo implements PlugInFilter {
 		new ImageJ();
 
 		// open the Clown sample
-		ImagePlus image = IJ.openImage("http://imagej.net/images/clown.jpg");
+		ImagePlus image = IJ.openImage("http://cs2.swfc.edu.cn/~zyl/wp-content/uploads/2015/05/strawberry.jpg");
 		image.show();
 
 		// run the plugin
