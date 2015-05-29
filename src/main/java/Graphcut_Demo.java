@@ -21,7 +21,7 @@ import ij.process.ImageProcessor;
  *
  * @author The Fiji Team
  */
-public class Process_Pixels implements PlugInFilter {
+public class Graphcut_demo implements PlugInFilter {
 	protected ImagePlus image;
 
 	// image property members
