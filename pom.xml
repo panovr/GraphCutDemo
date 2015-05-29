@@ -12,38 +12,35 @@
 		<relativePath />
 	</parent>
 
-	<groupId>sc.fiji</groupId>
-	<artifactId>Process_Pixels</artifactId>
+	<artifactId>Graphcut_Demo</artifactId>
 	<version>0.1.0-SNAPSHOT</version>
 
-	<name>plugins/Process_Pixels.jar</name>
-	<description>A Maven project implementing an ImageJ 1.x plugin</description>
+	<name>plugins/Graphcut_Demo.jar</name>
+	<description>A tutorial project implementing graphcut texture using Fiji's graphcut plugin</description>
 
 	<developers>
 		<developer>
-			<id>dscho</id>
-			<name>Johannes Schindelin</name>
-			<email>johannes.schindelin@gmx.de</email>
-			<url>http://loci.wisc.edu/people/johannes-schindelin</url>
-			<organization>UW-Madison LOCI</organization>
-			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
+			<id>ylzhao</id>
+			<name>Yili Zhao</name>
+			<email>panovr@gmail.com</email>
+			<url>http://cs2.swfu.edu.cn/~zyl</url>
+			<organization>Southwest Forestry University</organization>
+			<organizationUrl>http://www.swfu.edu.cn/</organizationUrl>
 			<roles>
-				<role>architect</role>
 				<role>developer</role>
 			</roles>
-			<timezone>-6</timezone>
 		</developer>
 	</developers>
 
 	<scm>
-		<connection>scm:git:git://github.com/imagej/minimal-ij1-plugin</connection>
-		<developerConnection>scm:git:git@github.com:imagej/minimal-ij1-plugin</developerConnection>
+		<connection>scm:git:git://github.com/panovr/GraphCutDemo</connection>
+		<developerConnection>scm:git:git@github.com/panovr/GraphCutDemo</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/imagej/minimal-ij1-plugin</url>
+		<url>https://github.com/panovr/GraphCutDemo</url>
 	</scm>
 
 	<properties>
-		<main-class>Process_Pixels</main-class>
+		<main-class>Graphcut_Demo</main-class>
 	</properties>
 	
 	<repositories>
@@ -63,7 +60,6 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>Graph_Cut</artifactId>
-			<version>1.0.1</version>
 		</dependency>
 	</dependencies>
 
